@@ -2,10 +2,14 @@ package com.ibm.quarkus.academy.client;
 
 import java.util.UUID;
 
+import com.ibm.quarkus.academy.client.exception.UnauthorizedException;
+import com.ibm.quarkus.academy.client.provider.CorrelationIdProvider;
 import com.ibm.quarkus.academy.dto.UserDto;
 import org.eclipse.microprofile.rest.client.annotation.ClientHeaderParam;
+import org.eclipse.microprofile.rest.client.annotation.RegisterClientHeaders;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
+import io.quarkus.rest.client.reactive.ClientExceptionMapper;
 import io.quarkus.rest.client.reactive.NotBody;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -19,9 +23,18 @@ import jakarta.ws.rs.core.Response;
 
 @RegisterRestClient(configKey = "simple-rest-client")
 @Path("/api/users")
+@RegisterClientHeaders(CorrelationIdProvider.class)
 @ClientHeaderParam(name = "X-Domain", value = "domain-from-annotation")
 @ClientHeaderParam(name = "X-Domain-From-Properties", value = "${rest.client.domain}")
 public interface SimpleRestClient {
+
+    @ClientExceptionMapper
+    static RuntimeException toException(Response response) {
+        if (response.getStatus() == 401) {
+            return new UnauthorizedException("You are not authorized :(", 401);
+        }
+        return null;
+    }
 
     @GET
     @Path("{id}")
